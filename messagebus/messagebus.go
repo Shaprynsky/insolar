@@ -41,6 +41,7 @@ type MessageBus struct {
 	Service core.Network `inject:""`
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	Ledger                     core.Ledger                     `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 	ActiveNodes                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
@@ -137,68 +138,60 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, optionSetter ...core.SendOption) (core.Reply, error) {
-	var options *core.SendOptions
-	if len(optionSetter) > 0 {
-		options = &core.SendOptions{}
-		for _, setter := range optionSetter {
-			setter(options)
-		}
-	}
-
-	parcel, err := mb.CreateParcel(ctx, msg, options)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, options)
+	return mb.SendParcel(ctx, parcel, ops)
 }
 
 // CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, options *core.SendOptions) (core.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), options)
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken) (core.Parcel, error) {
+	return mb.ParcelFactory.Create(ctx, msg, mb.Service.GetNodeID(), token)
 }
 
 // SendParcel sends provided message via network.
-func (mb *MessageBus) SendParcel(ctx context.Context, msg core.Parcel, options *core.SendOptions) (core.Reply, error) {
+func (mb *MessageBus) SendParcel(ctx context.Context, parcel core.Parcel, options *core.MessageSendOptions) (core.Reply, error) {
+	nodesTo := func(pulse core.PulseNumber) ([]core.RecordRef, error) {
+		if options.Receiver != nil {
+			return []core.RecordRef{*options.Receiver}, nil
+		} else {
+			target := message.ExtractTarget(parcel)
+			return mb.JetCoordinator.QueryRole(ctx, message.ExtractRole(parcel), &target, pulse)
+		}
+	}
+
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock()
 	defer scope.Unlock()
 
+	options = options.Safe()
 	pulse, err := mb.Ledger.GetPulseManager().Current(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	var nodes []core.RecordRef
-	if options != nil && options.Receiver != nil {
-		nodes = []core.RecordRef{*options.Receiver}
-	} else {
-		jc := mb.Ledger.GetJetCoordinator()
-		// TODO: send to all actors of the role if nil Target
-		target := message.ExtractTarget(msg)
-		nodes, err = jc.QueryRole(ctx, message.ExtractRole(msg), &target, pulse.PulseNumber)
-		if err != nil {
-			return nil, err
-		}
+	nodes, err := nodesTo(pulse.PulseNumber)
+	if err != nil {
+		return nil, err
 	}
-
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
 			NodeIds:           nodes,
 			Entropy:           pulse.Entropy,
 			ReplicationFactor: 2,
 		}
-		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, msg)
+		err := mb.Service.SendCascadeMessage(cascade, deliverRPCMethodName, parcel)
 		return nil, err
 	}
 
 	// Short path when sending to self node. Skip serialization
 	if nodes[0].Equal(mb.Service.GetNodeID()) {
-		return mb.doDeliver(msg.Context(context.Background()), msg)
+		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
-	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, msg)
+	res, err := mb.Service.SendMessage(nodes[0], deliverRPCMethodName, parcel)
 	if err != nil {
 		return nil, err
 	}

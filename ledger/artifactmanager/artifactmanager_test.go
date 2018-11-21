@@ -515,6 +515,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 			},
 			PulseNumber: core.GenesisPulse.PulseNumber,
 		},
+		nil,
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, reply.OK{}, *rep.(*reply.OK))
