@@ -38,9 +38,6 @@ pulsar:
   type: tcp
   listenaddress: 0.0.0.0:8090
   nodesaddresses: []
-genesis:
-  rootkeys: "../testdata/functional/root_member_keys.json"
-  rootbalance: 10000
-keyspath: "../testdata/functional/bootstrap_keys.json"
+keyspath: "../testdata/functional/discovery_node_1.json"
 certificatepath: "../testdata/functional/certificate.json"
 
