@@ -43,7 +43,7 @@ import (
 	"github.com/insolar/insolar/version/manager"
 )
 
-type BootstrapComponents struct {
+type bootstrapComponents struct {
 	CryptographyService        core.CryptographyService
 	PlatformCryptographyScheme core.PlatformCryptographyScheme
 	KeyStore                   core.KeyStore
@@ -51,7 +51,7 @@ type BootstrapComponents struct {
 	Certificate                core.Certificate
 }
 
-func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuration) BootstrapComponents {
+func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
 	earlyComponents := component.Manager{}
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -64,7 +64,7 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	earlyComponents.Register(platformCryptographyScheme, keyStore)
 	earlyComponents.Inject(cryptographyService, keyProcessor)
 
-	return BootstrapComponents{
+	return bootstrapComponents{
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: platformCryptographyScheme,
 		KeyStore:                   keyStore,
@@ -72,7 +72,7 @@ func InitBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-func InitCertificate(
+func initCertificate(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	isBootstrap bool,
@@ -96,8 +96,8 @@ func InitCertificate(
 	return cert
 }
 
-// InitComponents creates and links all insolard components
-func InitComponents(
+// initComponents creates and links all insolard components
+func initComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	cryptographyService core.CryptographyService,
@@ -108,8 +108,7 @@ func InitComponents(
 	isGenesis bool,
 	genesisConfigPath string,
 	genesisKeyOut string,
-
-) (*component.Manager, *ComponentManager, *Repl, error) {
+) (*component.Manager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -129,10 +128,7 @@ func InitComponents(
 	if isGenesis {
 		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-	} /*else {
-		gen, err = genesis.NewGenesis(isGenesis, "", "")
-		checkError(ctx, err, "failed to start Bootstrapper")
-	}*/
+	}
 
 	genesisDataProvider, err := genesisdataprovider.New()
 	checkError(ctx, err, "failed to start GenesisDataProvider")
@@ -153,70 +149,41 @@ func InitComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	phases := phases.NewPhaseManager()
-
 	cm := component.Manager{}
 	cm.Register(
 		platformCryptographyScheme,
 		keyStore,
 		cryptographyService,
 		keyProcessor,
-	)
-
-	ld := ledger.Ledger{} // TODO: remove me with cmOld
-
-	components := []interface{}{
 		cert,
 		nodeNetwork,
-		logicRunner,
-	}
-	components = append(components, ledger.GetLedgerComponents(cfg.Ledger)...)
+	)
 
-	cmOld := &ComponentManager{components: core.Components{
-		Certificate:                cert,
-		NodeNetwork:                nodeNetwork,
-		LogicRunner:                logicRunner,
-		Ledger:                     &ld,
-		Network:                    nw,
-		MessageBus:                 messageBus,
-		Genesis:                    nil,
-		APIRunner:                  apiRunner,
-		NetworkCoordinator:         networkCoordinator,
-		PlatformCryptographyScheme: platformCryptographyScheme,
-		CryptographyService:        cryptographyService,
-	}}
-	components = append(components, &ld, cmOld) // TODO: remove me with cmOld
+	components := ledger.GetLedgerComponents(cfg.Ledger)
+	ld := ledger.Ledger{} // TODO: remove me with cmOld
+	components = append(components, []interface{}{
+		nw,
+		messageBus,
+		&ld,
+		logicRunner,
+		delegationTokenFactory,
+		parcelFactory,
+	}...)
 
 	if isGenesis {
-		components = append(components, []interface{}{
-			nw,
-			messageBus,
-			delegationTokenFactory,
-			parcelFactory,
-			gen,
-			genesisDataProvider,
-			apiRunner,
-			metricsHandler,
-			networkCoordinator,
-			phases,
-			cryptographyService,
-		}...)
-	} else {
-		components = append(components, []interface{}{
-			nw,
-			messageBus,
-			delegationTokenFactory,
-			parcelFactory,
-			genesisDataProvider,
-			apiRunner,
-			metricsHandler,
-			networkCoordinator,
-			phases,
-			cryptographyService,
-		}...)
+		components = append(components, gen)
 	}
+
+	components = append(components, []interface{}{
+		genesisDataProvider,
+		apiRunner,
+		metricsHandler,
+		networkCoordinator,
+		phases.NewPhaseManager(),
+		cryptographyService,
+	}...)
 
 	cm.Inject(components...)
 
-	return &cm, cmOld, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
+	return &cm, &Repl{Manager: ld.GetPulseManager(), NodeNetwork: nodeNetwork}, nil
 }
