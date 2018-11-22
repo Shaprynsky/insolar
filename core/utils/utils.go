@@ -18,7 +18,7 @@ package utils
 
 import (
 	"encoding/binary"
-	"syscall"
+	"os"
 
 	"github.com/satori/go.uuid"
 )
@@ -39,5 +39,9 @@ func UInt32ToBytes(n uint32) []byte {
 }
 
 func SendGracefulStopSignal() error {
-	return syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		return err
+	}
+	return p.Signal(os.Interrupt)
 }

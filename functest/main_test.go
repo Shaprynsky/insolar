@@ -219,11 +219,19 @@ func waitForLaunch() error {
 	}
 }
 
-func startInsolard() error {
-	cmd = exec.Command(
+func startGenesis() error {
+	//out, err :=
+	exec.Command(
 		insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
-		"--keyout", testdataPath(),
-	)
+		"--keyout", testdataPath()).CombinedOutput()
+	/*if err != nil {
+		return errors.Wrapf(err, "[ generateCertificate ] could't run genesis: %s", out)
+	}*/
+	return nil
+}
+
+func startInsolard() error {
+	cmd = exec.Command(insolardPath)
 	var err error
 
 	stdin, err = cmd.StdinPipe()
@@ -352,6 +360,12 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build insolard: ")
 	}
 	fmt.Println("[ setup ] insolard was successfully builded")
+
+	err = startGenesis()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start genesis: ")
+	}
+	fmt.Println("[ setup ] genesis was successfully started")
 
 	err = startInsgorund()
 	if err != nil {
