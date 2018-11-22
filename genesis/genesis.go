@@ -58,6 +58,7 @@ type Genesis struct {
 	isGenesis       bool
 	config          *genesisConfig
 	keyOut          string
+	stop            *func()
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
@@ -83,11 +84,12 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string, stop *func()) (*Genesis, error) {
 	var err error
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
+	genesis.stop = stop
 	if isGenesis {
 		genesis.config, err = parseGenesisConfig(genesisConfigPath)
 		genesis.keyOut = genesisKeyOut
@@ -433,6 +435,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 		}
 	}
 
+	log.Println("STOPPING")
+	(*g.stop)()
 	return nil
 }
 

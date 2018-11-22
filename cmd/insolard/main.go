@@ -159,6 +159,8 @@ func main() {
 	}
 	defer jaegerflush()
 
+	var x func()
+
 	cm, cmOld, repl, err := InitComponents(
 		ctx,
 		*cfg,
@@ -170,8 +172,16 @@ func main() {
 		params.isGenesis,
 		params.genesisConfigPath,
 		params.genesisKeyOut,
+		&x,
 	)
 	checkError(ctx, err, "failed to init components")
+
+	x = func() {
+		err = cm.Stop(ctx)
+		jaegerflush()
+		//checkError(ctx, err, "failed to graceful stop components")
+		os.Exit(0)
+	}
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
