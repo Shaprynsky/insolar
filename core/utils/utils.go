@@ -18,6 +18,7 @@ package utils
 
 import (
 	"encoding/binary"
+	"syscall"
 
 	"github.com/satori/go.uuid"
 )
@@ -35,4 +36,8 @@ func UInt32ToBytes(n uint32) []byte {
 	buff := make([]byte, 4)
 	binary.BigEndian.PutUint32(buff, n)
 	return buff
+}
+
+func SendGracefulStopSignal() {
+	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 }

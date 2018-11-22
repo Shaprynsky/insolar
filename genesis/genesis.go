@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
@@ -58,7 +59,6 @@ type Genesis struct {
 	isGenesis       bool
 	config          *genesisConfig
 	keyOut          string
-	stop            *func()
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
@@ -84,12 +84,11 @@ func (g *Genesis) GetRootDomainRef() *core.RecordRef {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string, stop *func()) (*Genesis, error) {
+func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
 	var err error
 	genesis := &Genesis{}
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
-	genesis.stop = stop
 	if isGenesis {
 		genesis.config, err = parseGenesisConfig(genesisConfigPath)
 		genesis.keyOut = genesisKeyOut
@@ -435,8 +434,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 		}
 	}
 
-	log.Println("STOPPING")
-	(*g.stop)()
+	inslog.Info("[ Genesis ] Stopping Genesis ...")
+	utils.SendGracefulStopSignal()
 	return nil
 }
 

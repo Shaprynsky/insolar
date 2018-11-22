@@ -49,7 +49,6 @@ func TestInitComponents(t *testing.T) {
 		false,
 		"",
 		"",
-		nil,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, cm)

@@ -106,7 +106,6 @@ func InitComponents(
 	isGenesis bool,
 	genesisConfigPath string,
 	genesisKeyOut string,
-	genesisStopFunc *func(),
 
 ) (*component.Manager, *ComponentManager, *Repl, error) {
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg)
@@ -126,10 +125,10 @@ func InitComponents(
 
 	var gen core.Genesis
 	if isGenesis {
-		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut, genesisStopFunc)
+		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 	} else {
-		gen, err = genesis.NewGenesis(isGenesis, "", "", nil)
+		gen, err = genesis.NewGenesis(isGenesis, "", "")
 		checkError(ctx, err, "failed to start Bootstrapper")
 	}
 
