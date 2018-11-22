@@ -171,15 +171,13 @@ func main() {
 		params.genesisConfigPath,
 		params.genesisKeyOut,
 	)
+
 	checkError(ctx, err, "failed to init components")
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
 	cmOld.LinkAll(ctx)
-
-	err = cm.Start(ctx)
-	checkError(ctx, err, "failed to start components")
 
 	defer func() {
 		inslog.Warn("DEFER STOP APP")
@@ -192,6 +190,7 @@ func main() {
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
 	go func() {
+		fmt.Println("HERE")
 		sig := <-gracefulStop
 		inslog.Debugln("caught sig: ", sig)
 
@@ -201,6 +200,9 @@ func main() {
 		checkError(ctx, err, "failed to graceful stop components")
 		os.Exit(0)
 	}()
+
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Running interactive mode:")

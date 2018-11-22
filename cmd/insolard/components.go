@@ -129,10 +129,10 @@ func InitComponents(
 	if isGenesis {
 		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-	} else {
+	} /*else {
 		gen, err = genesis.NewGenesis(isGenesis, "", "")
 		checkError(ctx, err, "failed to start Bootstrapper")
-	}
+	}*/
 
 	genesisDataProvider, err := genesisdataprovider.New()
 	checkError(ctx, err, "failed to start GenesisDataProvider")
@@ -179,7 +179,7 @@ func InitComponents(
 		Ledger:                     &ld,
 		Network:                    nw,
 		MessageBus:                 messageBus,
-		Genesis:                    gen,
+		Genesis:                    nil,
 		APIRunner:                  apiRunner,
 		NetworkCoordinator:         networkCoordinator,
 		PlatformCryptographyScheme: platformCryptographyScheme,
@@ -187,19 +187,34 @@ func InitComponents(
 	}}
 	components = append(components, &ld, cmOld) // TODO: remove me with cmOld
 
-	components = append(components, []interface{}{
-		nw,
-		messageBus,
-		delegationTokenFactory,
-		parcelFactory,
-		gen,
-		genesisDataProvider,
-		apiRunner,
-		metricsHandler,
-		networkCoordinator,
-		phases,
-		cryptographyService,
-	}...)
+	if isGenesis {
+		components = append(components, []interface{}{
+			nw,
+			messageBus,
+			delegationTokenFactory,
+			parcelFactory,
+			gen,
+			genesisDataProvider,
+			apiRunner,
+			metricsHandler,
+			networkCoordinator,
+			phases,
+			cryptographyService,
+		}...)
+	} else {
+		components = append(components, []interface{}{
+			nw,
+			messageBus,
+			delegationTokenFactory,
+			parcelFactory,
+			genesisDataProvider,
+			apiRunner,
+			metricsHandler,
+			networkCoordinator,
+			phases,
+			cryptographyService,
+		}...)
+	}
 
 	cm.Inject(components...)
 

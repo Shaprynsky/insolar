@@ -355,42 +355,39 @@ func (g *Genesis) registerDiscoveryNodes(ctx context.Context, cb *goplugintestut
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
-	if g.isGenesis {
-		inslog.Info("[ Genesis ] Run genesis ...")
 
-		_, insgocc, err := goplugintestutils.Build()
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
-		}
+	_, insgocc, err := goplugintestutils.Build()
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't build insgocc")
+	}
 
-		cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
-		g.prototypeRefs = cb.Prototypes
-		defer cb.Clean()
+	cb := goplugintestutils.NewContractBuilder(g.ArtifactManager, insgocc)
+	g.prototypeRefs = cb.Prototypes
+	defer cb.Clean()
 
-		err = buildSmartContracts(ctx, cb)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
-		}
+	err = buildSmartContracts(ctx, cb)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't build contracts")
+	}
 
-		_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
-		}
+	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
+	}
 
-		err = g.activateSmartContracts(ctx, cb, rootPubKey)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ]")
-		}
+	err = g.activateSmartContracts(ctx, cb, rootPubKey)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ]")
+	}
 
-		nodes, err := g.registerDiscoveryNodes(ctx, cb)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ]")
-		}
+	nodes, err := g.registerDiscoveryNodes(ctx, cb)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ]")
+	}
 
-		err = g.makeCertificates(nodes)
-		if err != nil {
-			return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
-		}
+	err = g.makeCertificates(nodes)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
 	}
 
 	inslog.Info("[ Genesis ] Stopping Genesis ...")

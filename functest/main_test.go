@@ -50,10 +50,8 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 var insolarPath = filepath.Join(testdataPath(), "insolar")
 var insolardPath = filepath.Join(testdataPath(), "insolard")
-var insolarNodeKeysPath = filepath.Join(testdataPath(), insolarNodeKeys)
 var insolarRootMemberKeysPath = filepath.Join(testdataPath(), insolarRootMemberKeys)
 var insolarNodesKeysPath = filepath.Join(testdataPath(), "discovery_node_")
-var insolarCertificatePath = filepath.Join(testdataPath(), insolarCertificate)
 
 var info infoResponse
 var root user
@@ -110,13 +108,6 @@ func deleteDirForData() error {
 	return os.RemoveAll(filepath.Join(functestPath(), "data"))
 }
 
-func generateNodeKeys() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_keys",
-		"-o", insolarNodeKeysPath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateNodeKeys ] could't generate node keys: %s", out)
-}
-
 func generateRootMemberKeys() error {
 	out, err := exec.Command(
 		insolarPath, "-c", "gen_keys",
@@ -134,13 +125,6 @@ func generateDiscoveryNodesKeys() error {
 		}
 	}
 	return nil
-}
-
-func generateCertificate() error {
-	out, err := exec.Command(
-		insolarPath, "-c", "gen_certificate", "-g", insolarNodeKeysPath,
-		"-o", insolarCertificatePath).CombinedOutput()
-	return errors.Wrapf(err, "[ generateCertificate ] could't generate certificate: %s", out)
 }
 
 func loadRootKeys() error {
@@ -220,13 +204,13 @@ func waitForLaunch() error {
 }
 
 func startGenesis() error {
-	//out, err :=
-	exec.Command(
-		insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
-		"--keyout", testdataPath()).CombinedOutput()
-	/*if err != nil {
-		return errors.Wrapf(err, "[ generateCertificate ] could't run genesis: %s", out)
-	}*/
+	out, err :=
+		exec.Command(
+			insolardPath, "--genesis", filepath.Join(functestPath(), "genesis.yaml"),
+			"--keyout", testdataPath()).CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "[ startGenesis ] could't run genesis: %s", out)
+	}
 	return nil
 }
 
@@ -324,18 +308,6 @@ func setup() error {
 		return errors.Wrap(err, "[ setup ] could't build insolar: ")
 	}
 	fmt.Println("[ setup ] insolar was successfully builded")
-
-	err = generateNodeKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate node keys: ")
-	}
-	fmt.Println("[ setup ] node keys successfully generated")
-
-	err = generateCertificate()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't generate certificate: ")
-	}
-	fmt.Println("[ setup ] certificate successfully generated")
 
 	err = generateRootMemberKeys()
 	if err != nil {
