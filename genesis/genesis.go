@@ -435,7 +435,10 @@ func (g *Genesis) Start(ctx context.Context) error {
 	}
 
 	inslog.Info("[ Genesis ] Stopping Genesis ...")
-	utils.SendGracefulStopSignal()
+	err = utils.SendGracefulStopSignal()
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Failed to graceful stop genesis")
+	}
 	return nil
 }
 

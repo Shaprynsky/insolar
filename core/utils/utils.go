@@ -38,6 +38,6 @@ func UInt32ToBytes(n uint32) []byte {
 	return buff
 }
 
-func SendGracefulStopSignal() {
-	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+func SendGracefulStopSignal() error {
+	return syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 }
