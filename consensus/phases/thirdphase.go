@@ -14,7 +14,32 @@
  *    limitations under the License.
  */
 
-package core
+package phases
 
-// Genesis is the global genesis handler. Other system parts communicate with genesis through it.
-type Genesis interface{}
+import (
+	"context"
+
+	"github.com/insolar/insolar/core"
+)
+
+// ThirdPhasePulse.
+type ThirdPhasePulse struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhasePulseState
+}
+
+func (tpp *ThirdPhasePulse) Execute(ctx context.Context, state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
+}
+
+// ThirdPhaseReferendum.
+type ThirdPhaseReferendum struct {
+	NodeNetwork core.NodeNetwork `inject:""`
+	State       *ThirdPhaseReferendumState
+}
+
+func (tpr *ThirdPhaseReferendum) Execute(ctx context.Context, state *SecondPhaseState) error {
+	// TODO: do something here
+	return nil
+}

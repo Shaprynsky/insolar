@@ -14,7 +14,30 @@
  *    limitations under the License.
  */
 
-package core
+package fakepulsar
 
-// Genesis is the global genesis handler. Other system parts communicate with genesis through it.
-type Genesis interface{}
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
+)
+
+func onPulse(ctx context.Context, pulse core.Pulse) {
+}
+
+func TestGetFakePulse(t *testing.T) {
+	pulsar := NewFakePulsar(onPulse, 1000)
+	pulse := pulsar.GetFakePulse()
+	assert.NotNil(t, pulse)
+}
+
+func TestFakePulsar_Start(t *testing.T) {
+	pulsar := NewFakePulsar(onPulse, 1000)
+	ctx := context.TODO()
+	pulsar.Start(ctx)
+	time.Sleep(time.Millisecond * 1100)
+	pulsar.Stop(ctx)
+}
